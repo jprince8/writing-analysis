@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <style>
+      .dark{fill:none;stroke:#141414;stroke-width:52;stroke-linecap:round;stroke-linejoin:round}
+      .accent{fill:none;stroke:#f58220;stroke-width:52;stroke-linecap:round;stroke-linejoin:round}
+    </style>
+  </defs>
+  <path class="dark" d="M92 72 L92 440" />
+  <path class="dark" d="M92 72 L190 72 C252 72 286 110 286 162 C286 220 245 256 180 256 L92 256" />
+  <path class="dark" d="M184 258 L278 440" />
+  <path class="accent" d="M210 90 L210 440" />
+  <path class="accent" d="M210 90 L308 90 C370 90 404 128 404 180 C404 238 363 274 298 274 L210 274" />
+  <path class="accent" d="M302 276 L396 440" />
+</svg>
