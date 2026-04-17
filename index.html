@@ -482,13 +482,11 @@ When at last she blew out the lamp and stood in the dark a moment before climbin
     const statUnknown = document.getElementById('statUnknown');
     const ignoredUnknownWords = new Set();
     const ignoredHotWords = new Set();
-    const HOVER_FLASH_DELAY_MS = 500;
     const FLASH_HALF_PERIOD_MS = 500;
     let contributorIndicesByWordIndex = new Map();
-    let hoverDelayTimer = null;
     let flashTimer = null;
     let flashIsOn = false;
-    let pendingHoverWordIndex = null;
+    let activeFlashWordIndex = null;
     let activeFlashingContributors = [];
 
     function escapeHtml(text) {
@@ -705,13 +703,6 @@ When at last she blew out the lamp and stood in the dark a moment before climbin
       }
     }
 
-    function clearHoverDelayTimer() {
-      if (hoverDelayTimer !== null) {
-        clearTimeout(hoverDelayTimer);
-        hoverDelayTimer = null;
-      }
-    }
-
     function clearContributorFlashClass() {
       for (const contributor of activeFlashingContributors) {
         const el = output.querySelector(`span[data-word-index="${contributor.index}"]`);
@@ -729,6 +720,7 @@ When at last she blew out the lamp and stood in the dark a moment before climbin
         flashTimer = null;
       }
       flashIsOn = false;
+      activeFlashWordIndex = null;
       clearContributorFlashClass();
     }
 
@@ -763,62 +755,51 @@ When at last she blew out the lamp and stood in the dark a moment before climbin
         index,
         alpha: Math.max(0, Math.min(1, contribution / maxContribution))
       }));
+      activeFlashWordIndex = wordIndex;
       setContributorFlashState(true);
       flashTimer = setInterval(() => {
         setContributorFlashState(!flashIsOn);
       }, FLASH_HALF_PERIOD_MS);
     }
 
-    function getWordIndexAtViewportPoint(clientX, clientY) {
-      const previousInputPointerEvents = inputText.style.pointerEvents;
-      const previousOutputPointerEvents = output.style.pointerEvents;
-      inputText.style.pointerEvents = 'none';
-      output.style.pointerEvents = 'auto';
-      const hit = document.elementFromPoint(clientX, clientY);
-      inputText.style.pointerEvents = previousInputPointerEvents;
-      output.style.pointerEvents = previousOutputPointerEvents;
-      if (!(hit instanceof Element)) {
+    function getWordIndexAtCaret() {
+      if (document.activeElement !== inputText) {
         return null;
       }
-      const span = hit.closest('span[data-word-index]');
-      if (!(span instanceof HTMLElement)) {
+      if (inputText.selectionStart !== inputText.selectionEnd) {
         return null;
       }
-      const raw = span.getAttribute('data-word-index');
-      if (raw === null) {
+      const caret = inputText.selectionStart;
+      if (caret === null) {
         return null;
       }
-      const index = Number(raw);
-      return Number.isInteger(index) ? index : null;
-    }
-
-    function handleEditorPointerMove(event) {
-      const nextWordIndex = getWordIndexAtViewportPoint(event.clientX, event.clientY);
-      if (nextWordIndex === pendingHoverWordIndex) {
-        return;
-      }
-      pendingHoverWordIndex = nextWordIndex;
-      clearHoverDelayTimer();
-      stopContributorFlash();
-      if (nextWordIndex === null) {
-        return;
-      }
-      hoverDelayTimer = setTimeout(() => {
-        if (pendingHoverWordIndex !== nextWordIndex) {
-          return;
+      const wordRegex = /[A-Za-z]+(?:['’][A-Za-z]+)?/g;
+      let wordIndex = 0;
+      let match;
+      while ((match = wordRegex.exec(inputText.value)) !== null) {
+        const start = match.index;
+        const end = start + match[0].length;
+        if (caret >= start && caret < end) {
+          return wordIndex;
         }
-        startContributorFlashForWord(nextWordIndex);
-      }, HOVER_FLASH_DELAY_MS);
+        wordIndex += 1;
+      }
+      return null;
     }
 
-    function clearHoverAndFlash() {
-      pendingHoverWordIndex = null;
-      clearHoverDelayTimer();
+    function updateContributorFlashFromCaret() {
+      const nextWordIndex = getWordIndexAtCaret();
+      if (nextWordIndex === activeFlashWordIndex) {
+        return;
+      }
       stopContributorFlash();
+      if (nextWordIndex !== null) {
+        startContributorFlashForWord(nextWordIndex);
+      }
     }
 
     function render({ syncScroll = false } = {}) {
-      clearHoverAndFlash();
+      stopContributorFlash();
       autoSizeInput({ preserveViewport: !syncScroll });
       sensitivityValue.textContent = `${Number(sensitivity.value).toFixed(0)}%`;
       distanceSensitivityValue.textContent = `${Number(distanceSensitivity.value).toFixed(0)}%`;
@@ -982,6 +963,7 @@ When at last she blew out the lamp and stood in the dark a moment before climbin
       if (syncScroll) {
         syncOutputScroll();
       }
+      updateContributorFlashFromCaret();
     }
 
     [sensitivity, distanceSensitivity, historyPenalty, unknownWordRarity, uncommonnessSensitivity, normaliseSimilarWords].forEach((element) => {
@@ -1020,11 +1002,11 @@ When at last she blew out the lamp and stood in the dark a moment before climbin
     inputText.addEventListener('change', () => render({ syncScroll: false }));
 
     inputText.addEventListener('scroll', syncOutputScroll);
-    inputText.addEventListener('mousemove', handleEditorPointerMove);
-    inputText.addEventListener('mouseleave', clearHoverAndFlash);
-    inputText.addEventListener('mousedown', clearHoverAndFlash);
-    inputText.addEventListener('keydown', clearHoverAndFlash);
-    inputText.addEventListener('blur', clearHoverAndFlash);
+    inputText.addEventListener('click', updateContributorFlashFromCaret);
+    inputText.addEventListener('keyup', updateContributorFlashFromCaret);
+    inputText.addEventListener('select', updateContributorFlashFromCaret);
+    inputText.addEventListener('blur', stopContributorFlash);
+    document.addEventListener('selectionchange', updateContributorFlashFromCaret);
     window.addEventListener('resize', () => render({ syncScroll: true }));
 
     render({ syncScroll: true });
