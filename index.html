@@ -429,7 +429,7 @@ By dusk the lane was quiet, almost too quiet, and Mara told herself she was only
 
 She lit the small lamp on the table and opened the notebook she had bought from the stall in the square. On the first page she wrote only a few scattered words to test the pen: crowd, gate, dog, quartz, crikey. Then, for no good reason at all, she wrote crikey again. On the next line she wrote dog, then dog’s, then DOG, merely to see whether the hand changed what the mind kept together. The pen scratched differently in capitals, but the word beneath remained stubbornly the same. After that she wrote zephyrium, then left half a page blank before writing zephyrium once more, to see whether distance altered the feeling of repetition. It did. Nearby repetition seemed comic, almost loud; distant repetition seemed deliberate, as though the word had travelled and returned with a coat of dust.
 
-After a while she became childish with it. Nebulonx, she wrote, then Nebulonx again, and then, grinning in spite of herself, nebulonx a third time. She tried Xylarith too, because one invented word deserved another, and once written Xylarith refused to behave like an invention. It acquired, in an instant, the false authority of print. Xylarith looked as though it ought to refer to a mineral, or a saint, or a process involving glass. She wrote Xylarith again merely because it had become plausible. After that came quieter experiments: don’t, don’t, don’t; you’re and you’re; convulse, convulsed, convulsing. She had no purpose beyond the pleasure of watching words tilt away from meaning and toward pattern.
+After a while she became childish with it. Nebulonx, she wrote, then Nebulonx again, and then, grinning in spite of herself, nebulonx a third time. She tried Xylarith too, because one invented word deserved another, and once written Xylarith refused to behave like an invention. It acquired, in an instant, the false authority of print. Xylarith looked as though it ought to refer to a mineral, or a saint, or a process involving glass. She wrote Xylarith again merely because it had become plausible. After that came quieter experiments: don’t, don’t, don’t; you’re and you’re; convulsed, convulsing. She had no purpose beyond the pleasure of watching words tilt away from meaning and toward pattern.
 
 Outside, the last of the market crowd was dissolving into separate footsteps and closing doors. Somewhere near the square someone laughed too loudly, then again more faintly, as if the laugh itself were walking away. A dog barked once, twice, and then with such bored consistency that the barking stopped sounding like an alarm and became part of the evening’s machinery. Mara sat with the notebook open and listened for another rattle of wheels, another click of timber, another voice saying crikey in the dark, but none came. Instead the silence arranged itself around the repeated things she already had: the gate, the lamp, the lock; the crowd, the pause, the square; quartz in silver letters; zephyrium in a crooked label; nebulonx in a toyshop window; red fox ran fast on a chapel wall. They returned one by one and then in clusters, some close together, some after long gaps, until the whole evening seemed made not of events but of recurrences.
 
@@ -514,6 +514,31 @@ When at last she blew out the lamp and stood in the dark a moment before climbin
       return ignoredUnknownWords.has(key) || ignoredHotWords.has(key);
     }
 
+    function undoubleTerminalConsonant(word) {
+      return /([bdfgmnprt])\1$/.test(word) ? word.slice(0, -1) : word;
+    }
+
+    function hasKnownWord(word) {
+      return Object.prototype.hasOwnProperty.call(COMMON_ZIPF, word);
+    }
+
+    function resolveInflectedBase(originalWord, strippedStem) {
+      const stemPlusE = `${strippedStem}e`;
+      const hasStem = hasKnownWord(strippedStem);
+      const hasStemPlusE = hasKnownWord(stemPlusE);
+      if (!hasStem && hasStemPlusE) {
+        return stemPlusE;
+      }
+      // For short stems where both are words (hop/hope, not/note), prefer silent-e base.
+      if (hasStem && hasStemPlusE && strippedStem.length <= 3) {
+        return stemPlusE;
+      }
+      if (hasStem) {
+        return strippedStem;
+      }
+      return originalWord;
+    }
+
     function normaliseWord(word) {
       let result = word.toLowerCase();
       // Treat typographic apostrophes the same as ASCII apostrophes.
@@ -531,25 +556,31 @@ When at last she blew out the lamp and stood in the dark a moment before climbin
 
       // Basic inflection stripping to group similar forms.
       if (result.length > 5 && result.endsWith('ing')) {
-        result = result.slice(0, -3);
-        if (/([b-df-hj-np-tv-z])\1$/.test(result)) {
-          result = result.slice(0, -1);
-        }
+        const stem = undoubleTerminalConsonant(result.slice(0, -3));
+        result = resolveInflectedBase(result, stem);
       } else if (result.length > 4 && result.endsWith('ied')) {
         result = `${result.slice(0, -3)}y`;
       } else if (result.length > 4 && result.endsWith('ed')) {
-        result = result.slice(0, -2);
-        if (/([b-df-hj-np-tv-z])\1$/.test(result)) {
-          result = result.slice(0, -1);
-        }
+        const stem = undoubleTerminalConsonant(result.slice(0, -2));
+        result = resolveInflectedBase(result, stem);
       } else if (result.length > 4 && result.endsWith('ies')) {
         result = `${result.slice(0, -3)}y`;
       } else if (result.length > 4 && result.endsWith('es')) {
-        if (/(?:s|x|z|ch|sh)$/.test(result.slice(0, -2))) {
-          result = result.slice(0, -2);
+        const stem = result.slice(0, -2);
+        if (/(?:s|x|z|ch|sh)$/.test(stem)) {
+          const stemPlusE = `${stem}e`;
+          if (hasKnownWord(stem)) {
+            result = stem;
+          } else if (hasKnownWord(stemPlusE)) {
+            // E.g. purposes -> purpose, where plain "strip es" over-shoots.
+            result = stemPlusE;
+          }
         }
       } else if (result.length > 3 && result.endsWith('s') && !result.endsWith('ss')) {
-        result = result.slice(0, -1);
+        const stem = result.slice(0, -1);
+        if (hasKnownWord(stem)) {
+          result = stem;
+        }
       }
       return result;
     }
