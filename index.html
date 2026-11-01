@@ -179,7 +179,7 @@
       height: 12px;
       border-radius: 999px;
       border: 1px solid var(--border);
-      background: linear-gradient(to right, rgb(255,255,255), rgb(252, 211, 77), rgb(245, 124, 0), rgb(194, 65, 12));
+      background: linear-gradient(to right, rgb(255,255,255), rgb(244, 208, 77), rgb(234, 118, 0), rgb(160, 45, 13));
     }
 
     .stats {
@@ -320,10 +320,10 @@
       /* Keep text metrics identical to the textarea to prevent wrap drift. */
       font-weight: inherit;
       color: inherit;
-      background-color: rgba(217, 119, 6, 0.42);
+      background-color: rgba(193, 88, 0, 0.35);
       text-decoration: underline;
       text-decoration-thickness: 1.5px;
-      text-decoration-color: rgba(120, 53, 15, 0.9);
+      text-decoration-color: rgba(102, 40, 9, 0.9);
       text-underline-offset: 0.12em;
     }
 
@@ -466,4 +466,62 @@ When at last she blew out the lamp and stood in the dark a moment before climbin
   </div>
 
   <script>
-    const COMMON_ZIPF = {"the": 7.73, "to": 7.43, "and": 7.41, "of": 7.4, "a": 7.36, "in": 7.27, "i": 7.09, "is": 7.07, "for": 7.01, "that": 7.01, "you": 6.98, "it": 6.95, "on": 6.91, "with": 6.8[...
+    const COMMON_ZIPF = {"the": 7.73, "to": 7.43, "and": 7.41, "of": 7.4, "a": 7.36, "in": 7.27, "i": 7.09, "is": 7.07, "for": 7.01, "that": 7.01, "you": 6.98, "it": 6.95, "on": 6.91, "with": 6.8, "as": 6.75, "this": 6.72, "be": 6.6, "are": 6.52, "or": 6.36, "at": 6.28, "from": 6.12, "by": 6.09, "not": 6.02, "have": 5.98, "was": 5.94, "we": 5.87, "an": 5.82, "they": 5.75, "that": 5.7, "all": 5.68, "can": 5.68, "their": 5.65, "but": 5.63, "one": 5.53, "my": 5.5, "out": 5.5, "what": 5.46, "about": 5.39, "who": 5.34, "which": 5.31, "when": 5.29, "she": 5.27, "her": 5.2, "there": 5.15, "his": 5.1, "up": 5.08, "them": 5.02, "had": 5.0, "he": 4.96, "would": 4.9, "our": 4.87, "your": 4.86, "if": 4.81, "us": 4.79, "no": 4.73, "me": 4.7, "so": 4.67, "do": 4.64, "than": 4.62, "been": 4.56, "into": 4.47, "more": 4.38, "very": 4.31, "will": 4.28, "other": 4.24, "after": 4.18, "like": 4.14, "just": 4.13, "some": 4.08, "could": 4.04, "then": 4.01, "make": 3.96, "know": 3.91, "over": 3.89, "these": 3.82, "people": 3.8, "say": 3.76, "time": 3.73, "see": 3.71, "way": 3.64, "also": 3.6, "back": 3.57, "think": 3.55, "work": 3.52, "where": 3.5, "use": 3.48, "new": 3.44, "take": 3.4, "good": 3.37, "day": 3.35, "well": 3.31, "two": 3.29, "most": 3.29, "want": 3.25, "because": 3.22, "might": 3.19, "how": 3.16, "man": 3.14, "many": 3.12, "come": 3.11, "does": 3.08, "down": 3.06, "first": 3.04, "little": 3.02, "here": 3.0, "around": 2.97, "life": 2.95, "get": 2.93, "right": 2.91, "through": 2.88, "off": 2.87, "still": 2.85, "last": 2.81, "need": 2.77, "make": 2.73, "thing": 2.7, "why": 2.68, "even": 2.66, "old": 2.63, "find": 2.6, "again": 2.6, "much": 2.56, "before": 2.54, "great": 2.51, "must": 2.48, "without": 2.46, "look": 2.44, "while": 2.39, "any": 2.37, "same": 2.36, "went": 2.33, "under": 2.32, "too": 2.27, "long": 2.25, "such": 2.23, "year": 2.22, "home": 2.19, "every": 2.17, "once": 2.15, "went": 2.12, "made": 2.11, "become": 2.09, "ever": 2.08, "those": 2.06, "give": 2.05, "only": 2.03, "told": 2.0, "call": 1.98, "put": 1.96, "keep": 1.94, "part": 1.92, "far": 1.9, "took": 1.88, "hand": 1.87, "came": 1.85, "place": 1.83, "found": 1.82, "thought": 1.8, "next": 1.78, "friend": 1.76, "small": 1.74, "number": 1.72, "head": 1.71, "saw": 1.68, "asked": 1.67, "world": 1.65, "understand": 1.63, "show": 1.6};
+
+    function normalizeWord(word) {
+      return word.toLowerCase();
+    }
+
+    function computeTextStats(text) {
+      const words = text.match(/[A-Za-z']+/g) || [];
+      const normalized = words.map(w => normalizeWord(w));
+      const counts = {};
+      for (const w of normalized) {
+        counts[w] = (counts[w] || 0) + 1;
+      }
+      return { words, normalized, counts };
+    }
+
+    function render() {
+      const text = document.getElementById('inputText').value;
+      const { normalized, counts } = computeTextStats(text);
+      const output = document.getElementById('output');
+      output.innerHTML = '';
+
+      const tokens = text.match(/\S+|\n|\s+/g) || [];
+      let idx = 0;
+
+      for (const token of tokens) {
+        if (/^\s+$/.test(token)) {
+          output.appendChild(document.createTextNode(token));
+          continue;
+        }
+
+        if (/^\n+$/.test(token)) {
+          output.appendChild(document.createTextNode(token));
+          continue;
+        }
+
+        const word = token.replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, '');
+        if (!word) {
+          output.appendChild(document.createTextNode(token));
+          continue;
+        }
+
+        const normalizedWord = normalizeWord(word);
+        if (counts[normalizedWord] > 1) {
+          const span = document.createElement('span');
+          span.className = 'token-hot';
+          span.textContent = token;
+          output.appendChild(span);
+        } else {
+          output.appendChild(document.createTextNode(token));
+        }
+      }
+    }
+
+    document.getElementById('inputText').addEventListener('input', render);
+    render();
+  </script>
+</body>
+</html>
